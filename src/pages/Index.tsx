@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -42,7 +41,7 @@ const Index = () => {
           variant: "destructive",
         });
       } else {
-        setRequests(data || []);
+        setRequests((data || []) as Request[]);
       }
     } catch (error) {
       console.error('Error:', error);
