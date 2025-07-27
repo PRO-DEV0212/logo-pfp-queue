@@ -4,26 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Lock, Trash2, Edit, Eye, EyeOff } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Trash2, Eye, EyeOff, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Request {
@@ -36,29 +18,17 @@ interface Request {
 }
 
 const Admin = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const ADMIN_PASSWORD = 'youtube0212';
-
-  useEffect(() => {
-    if (isAuthenticated) {
+  const handleLogin = () => {
+    if (password === 'youtube0212') {
+      setAuthenticated(true);
       fetchRequests();
-    }
-  }, [isAuthenticated]);
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      toast({
-        title: "Success",
-        description: "Welcome to the admin panel",
-      });
     } else {
       toast({
         title: "Error",
@@ -74,7 +44,7 @@ const Admin = () => {
       const { data, error } = await supabase
         .from('requests')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true }); // Changed to ascending for oldest first
 
       if (error) {
         console.error('Error fetching requests:', error);
@@ -93,15 +63,15 @@ const Admin = () => {
     }
   };
 
-  const updateRequestStatus = async (id: string, newStatus: 'pending' | 'in_progress' | 'completed') => {
+  const updateRequestStatus = async (id: string, status: Request['status']) => {
     try {
       const { error } = await supabase
         .from('requests')
-        .update({ status: newStatus })
+        .update({ status })
         .eq('id', id);
 
       if (error) {
-        console.error('Error updating request:', error);
+        console.error('Error updating request status:', error);
         toast({
           title: "Error",
           description: "Failed to update request status",
@@ -111,7 +81,7 @@ const Admin = () => {
         fetchRequests();
         toast({
           title: "Success",
-          description: "Request status updated successfully",
+          description: "Request status updated successfully!",
         });
       }
     } catch (error) {
@@ -137,7 +107,7 @@ const Admin = () => {
         fetchRequests();
         toast({
           title: "Success",
-          description: "Request deleted successfully",
+          description: "Request deleted successfully!",
         });
       }
     } catch (error) {
@@ -145,14 +115,36 @@ const Admin = () => {
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Clock className="w-4 h-4" />;
+      case 'in_progress':
+        return <AlertCircle className="w-4 h-4" />;
+      case 'completed':
+        return <CheckCircle className="w-4 h-4" />;
+      default:
+        return <Clock className="w-4 h-4" />;
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="secondary">Pending</Badge>;
+        return <Badge variant="secondary" className="flex items-center gap-1">
+          {getStatusIcon(status)}
+          Pending
+        </Badge>;
       case 'in_progress':
-        return <Badge variant="outline" className="text-orange-600 border-orange-600">In Progress</Badge>;
+        return <Badge variant="outline" className="flex items-center gap-1 text-orange-600 border-orange-600">
+          {getStatusIcon(status)}
+          In Progress
+        </Badge>;
       case 'completed':
-        return <Badge variant="outline" className="text-green-600 border-green-600">Completed</Badge>;
+        return <Badge variant="outline" className="flex items-center gap-1 text-green-600 border-green-600">
+          {getStatusIcon(status)}
+          Completed
+        </Badge>;
       default:
         return <Badge variant="secondary">Unknown</Badge>;
     }
@@ -171,127 +163,147 @@ const Admin = () => {
     }
   };
 
-  if (!isAuthenticated) {
+  const getStatusCounts = () => {
+    const counts = {
+      pending: 0,
+      in_progress: 0,
+      completed: 0,
+    };
+
+    requests.forEach(request => {
+      counts[request.status] += 1;
+    });
+
+    return counts;
+  };
+
+  if (!authenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-center flex items-center justify-center gap-2">
-              <Lock className="w-5 h-5" />
-              Admin Access
-            </CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">Admin Access</CardTitle>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter admin password"
-                    className="mt-1 pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium">
+                Password
+              </label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                  placeholder="Enter admin password"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
-              <Button type="submit" className="w-full">
-                Login
-              </Button>
-            </form>
+            </div>
+            <Button onClick={handleLogin} className="w-full">
+              Login
+            </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  const statusCounts = getStatusCounts();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
-          <Button 
-            onClick={() => setIsAuthenticated(false)}
-            variant="outline"
-          >
-            Logout
-          </Button>
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Admin Dashboard
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            Manage Logo/PFP requests and update their status
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-gray-900">
-                {requests.filter(r => r.status === 'pending').length}
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Pending</p>
+                  <p className="text-2xl font-bold">{statusCounts.pending}</p>
+                </div>
+                <Clock className="w-8 h-8 text-gray-400" />
               </div>
-              <p className="text-sm text-muted-foreground">Pending</p>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-orange-600">
-                {requests.filter(r => r.status === 'in_progress').length}
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">In Progress</p>
+                  <p className="text-2xl font-bold">{statusCounts.in_progress}</p>
+                </div>
+                <AlertCircle className="w-8 h-8 text-orange-400" />
               </div>
-              <p className="text-sm text-muted-foreground">In Progress</p>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">
-                {requests.filter(r => r.status === 'completed').length}
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Completed</p>
+                  <p className="text-2xl font-bold">{statusCounts.completed}</p>
+                </div>
+                <CheckCircle className="w-8 h-8 text-green-400" />
               </div>
-              <p className="text-sm text-muted-foreground">Completed</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-600">
-                {requests.length}
-              </div>
-              <p className="text-sm text-muted-foreground">Total</p>
             </CardContent>
           </Card>
         </div>
 
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading requests...</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {requests.map((request, index) => (
+        {/* Request List */}
+        <div className="space-y-4">
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading requests...</p>
+            </div>
+          ) : requests.length === 0 ? (
+            <Card className="text-center py-12">
+              <CardContent>
+                <Clock className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No requests yet</h3>
+                <p className="text-muted-foreground">Requests will appear here once submitted</p>
+              </CardContent>
+            </Card>
+          ) : (
+            requests.map((request, index) => (
               <Card key={request.id} className={`border-l-4 ${getStatusColor(request.status)}`}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-2">
                         <span className="text-sm font-medium text-muted-foreground">
-                          #{requests.length - index}
+                          #{index + 1}
                         </span>
                         {getStatusBadge(request.status)}
                       </div>
                       <CardTitle className="text-lg">{request.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Created: {new Date(request.created_at).toLocaleString()}
-                      </p>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Submitted: {new Date(request.created_at).toLocaleDateString()}
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <Select
                         value={request.status}
-                        onValueChange={(value: 'pending' | 'in_progress' | 'completed') => 
-                          updateRequestStatus(request.id, value)
-                        }
+                        onValueChange={(value) => updateRequestStatus(request.id, value as Request['status'])}
                       >
                         <SelectTrigger className="w-32">
                           <SelectValue />
@@ -302,30 +314,13 @@ const Admin = () => {
                           <SelectItem value="completed">Completed</SelectItem>
                         </SelectContent>
                       </Select>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Request</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this request? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => deleteRequest(request.id)}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => deleteRequest(request.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 </CardHeader>
@@ -335,9 +330,27 @@ const Admin = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-12 space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Admin Dashboard - Manage requests in chronological order
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Produced by{' '}
+            <a 
+              href="https://www.youtube.com/@LiFTE_mc" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 underline font-medium"
+            >
+              LiFTE
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );

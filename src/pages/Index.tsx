@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from('requests')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true }); // Changed to ascending for oldest first
 
       if (error) {
         console.error('Error fetching requests:', error);
@@ -176,7 +177,7 @@ const Index = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-medium text-muted-foreground">
-                          #{requests.length - index}
+                          #{index + 1}
                         </span>
                         {getStatusBadge(request.status)}
                       </div>
@@ -199,8 +200,21 @@ const Index = () => {
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-12 text-sm text-muted-foreground">
-          <p>Requests are processed in the order they were received</p>
+        <div className="text-center mt-12 space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Requests are processed in the order they were received
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Produced by{' '}
+            <a 
+              href="https://www.youtube.com/@LiFTE_mc" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 underline font-medium"
+            >
+              LiFTE
+            </a>
+          </p>
         </div>
       </div>
     </div>
