@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Plus, Clock, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { RequestForm } from '@/components/RequestForm';
 
@@ -20,6 +21,9 @@ interface Request {
 const Index = () => {
   const [requests, setRequests] = useState<Request[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -32,7 +36,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from('requests')
         .select('*')
-        .order('created_at', { ascending: true }); // Changed to ascending for oldest first
+        .order('created_at', { ascending: true });
 
       if (error) {
         console.error('Error fetching requests:', error);
@@ -48,6 +52,24 @@ const Index = () => {
       console.error('Error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitRequest = () => {
+    setShowPasswordModal(true);
+  };
+
+  const handlePasswordSubmit = () => {
+    if (password === 'youtube0212') {
+      setShowPasswordModal(false);
+      setShowForm(true);
+      setPassword('');
+    } else {
+      toast({
+        title: "Error",
+        description: "Invalid password",
+        variant: "destructive",
+      });
     }
   };
 
@@ -136,7 +158,7 @@ const Index = () => {
         {/* Action Button */}
         <div className="flex justify-center mb-8">
           <Button 
-            onClick={() => setShowForm(true)}
+            onClick={handleSubmitRequest}
             size="lg"
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200"
           >
@@ -144,6 +166,57 @@ const Index = () => {
             Submit New Request
           </Button>
         </div>
+
+        {/* Password Modal */}
+        {showPasswordModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-md">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold text-center">Enter Password</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+                      placeholder="Enter password to submit request"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handlePasswordSubmit} className="flex-1">
+                    Submit
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowPasswordModal(false);
+                      setPassword('');
+                    }}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Request Form Modal */}
         {showForm && (
